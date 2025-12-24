@@ -6,3 +6,4 @@ openpyxl==3.1.2
 img2pdf==0.4.6
 Werkzeug==2.3.7
 requests==2.32.0
+python-dotenv==1.0.0
