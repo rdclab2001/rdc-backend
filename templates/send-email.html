@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Send Report Email - RDC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 30px; }
+        .pdf-link { margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Send Lab Test Report</h2>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-3">Back to Dashboard</a>
+
+        <form id="reportForm">
+            <div class="mb-3">
+                <label for="patientSelect" class="form-label">Select Patient</label>
+                <select class="form-select" id="patientSelect" name="email" required>
+                    <option value="">-- Select Patient --</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="images" class="form-label">Upload Images</label>
+                <input class="form-control" type="file" id="images" name="images" multiple accept="image/*" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Convert & Send Email</button>
+
+        </form>
+
+        <div class="pdf-link mt-3" id="pdfLink" style="display:none;">
+            <p>PDF generated successfully! <a href="#" target="_blank" id="pdfDownload">Download PDF</a></p>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Fetch patients
+        async function loadPatients() {
+            try {
+                const res = await axios.get('/get-all-patients');
+                const patients = res.data;
+                const select = document.getElementById('patientSelect');
+                patients.forEach(p => {
+                    if (p.email) {
+                        const option = document.createElement('option');
+                        option.value = p.email || "";
+                        option.text = `${p.name} (${p.mobile})${p.email ? " - " + p.email : ""}`;
+                        select.appendChild(option);
+
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+                alert('Failed to load patients.');
+            }
+        }
+
+        loadPatients();
+
+        // Handle form submission
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            const email = document.getElementById('patientSelect').value;
+            if (!email) return alert('Select a patient.');
+
+            formData.append('email', email);
+            const files = document.getElementById('images').files;
+            for (let f of files) formData.append('images', f);
+
+            try {
+                const res = await axios.post('/convert-and-send-report', formData, {
+
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                if (res.data.success) {
+                    document.getElementById('pdfDownload').href = res.data.pdf_url;
+                    document.getElementById('pdfLink').style.display = 'block';
+                    alert("✅ Report sent to patient email successfully");
+                } else {
+                    alert('Failed: ' + (res.data.error || 'Unknown error'));
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert('Server error.');
+            }
+        });
+    </script>
+</body>
+</html>

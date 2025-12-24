@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image to PDF Converter</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f3f6fb; padding:50px; }
+.container { max-width:500px; margin:auto; background:white; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+input[type=file] { width:100%; padding:10px; margin-bottom:10px; }
+button { padding:10px 15px; background:#1877f2; color:white; border:none; border-radius:6px; cursor:pointer; }
+button:hover { opacity:0.9; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h2>Upload Images to Convert PDF</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="images" multiple required>
+        <button type="submit">Convert & Download PDF</button>
+    </form>
+</div>
+</body>
+</html>

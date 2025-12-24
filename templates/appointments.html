@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appointments - RDC</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root {
+  --primary: #1877f2;
+  --muted: #6b7280;
+  --bg: #f3f6fb;
+  --success: #16a34a;
+  --warning: #facc15;
+  --danger: #dc2626;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:Segoe UI, Arial; }
+body { background: var(--bg); }
+
+/* Layout */
+.container { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+
+/* Sidebar */
+.sidebar {
+  background:white;
+  padding:20px;
+  border-right:1px solid #e5e7eb;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.sidebar h2 { color: var(--primary); margin-bottom:20px; }
+.nav a {
+  display:block; padding:12px; color:#111; text-decoration:none;
+  border-radius:6px; margin-bottom:5px;
+}
+.nav a:hover { background:#eef4ff; }
+.nav a.active { background: var(--primary); color:white; }
+
+/* Logout */
+.logout-btn {
+  margin-top:30px; display:block; padding:12px; background:#ef4444;
+  color:white; text-align:center; border-radius:6px; text-decoration:none;
+}
+.logout-btn:hover { background:#dc2626; }
+
+/* Main */
+.main { padding:25px; }
+
+/* Form */
+.add-form {
+  background:white; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom:20px;
+}
+.add-form h3 { margin-bottom:12px; color:var(--primary); }
+.add-form input {
+  width: 22%; padding:10px; margin-right:10px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;
+}
+.add-form button {
+  padding:10px 18px; background:var(--primary); color:white; border:none; border-radius:6px; cursor:pointer;
+}
+.add-form button:hover { opacity:0.9; }
+
+/* Responsive form */
+@media (max-width:768px) {
+  .add-form input { width: 48%; }
+}
+@media (max-width:480px) {
+  .add-form input { width: 100%; margin-right:0; }
+}
+
+/* Search */
+.search-box { margin-bottom:15px; }
+.search-box input {
+  width:100%; padding:12px; border-radius:6px; border:1px solid #ccc;
+}
+
+/* Table */
+.table-box table {
+  width:100%; border-collapse:collapse; background:white;
+  border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+th,td { padding:12px; border-bottom:1px solid #eee; text-align:left; }
+th { background:#f5f7fa; color:var(--muted); }
+tr:hover { background:#f9f9f9; }
+
+/* Status Dropdown */
+select.status-dropdown {
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  cursor:pointer;
+  background:white;
+  transition:0.2s;
+}
+select.status-dropdown:hover { border-color: var(--primary); }
+.status-badge { padding:6px 8px; border-radius:6px; font-weight:600; display:inline-block; }
+.status-pending { background:#facc15; color:#111; }
+.status-confirmed { background:#16a34a; color:#fff; }
+.status-cancelled { background:#dc2626; color:#fff; }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <h2>RDC</h2>
+      <nav class="nav">
+        <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+        <a href="/appointments" class="active"><i class="fa fa-calendar"></i> Appointments</a>
+        <a href="/website-leads"><i class="fa fa-globe"></i> Website Leads</a>
+        <a href="/download-excel"><i class="fa fa-file-excel"></i> Download Excel</a>
+        <a href="/send-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i> Send in WhatsApp</a>
+      </nav>
+    </div>
+
+    <a href="/logout" class="logout-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+  </aside>
+
+  <!-- Main -->
+<main class="main">
+    <h1>Appointments</h1>
+
+    <!-- Add Form -->
+    <div class="add-form">
+        <h3>Add Appointment</h3>
+    <form id="addAppointmentForm">
+        <!-- IMPORTANT: name attributes match backend columns -->
+        <input type="text" name="name" placeholder="Name" required>
+        <input type="text" name="mobile" placeholder="Mobile Number" required>
+        <input type="email" name="email" placeholder="Email ID" required>
+        <input type="text" name="test_type" placeholder="Test" required>
+        <input type="text" name="message" placeholder="Patient Concern">
+
+        <button type="submit">Add</button>
+    </form>
+
+    </div>
+
+    <!-- Search -->
+    <div class="search-box">
+        <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search Name, Mobile, Email...">
+    </div>
+
+    <!-- Table -->
+    <div class="table-box">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Mobile Number</th>
+                    <th>Email ID</th>
+                    <th>Test</th>
+                    <th>Patient Concern</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for appt in appointments %}
+                <tr data-id="{{ appt.id }}">
+
+                    <td>{{ appt.name }}</td>
+                    <td>{{ appt.mobile }}</td>
+                    <td>{{ appt.email }}</td>
+                    <!-- template uses test_type and message to match DB columns -->
+                    <td>{{ appt.test_type }}</td>
+                    <td>{{ appt.message }}</td>
+
+                    <!-- Status Badge -->
+                    <td class="status-text">
+                        {% if appt.status == 'done' %}
+                            <span class="status-badge status-confirmed">Done</span>
+                        {% elif appt.status == 'cancelled' %}
+                            <span class="status-badge status-cancelled">Cancelled</span>
+                        {% else %}
+                            <span class="status-badge status-pending">Pending</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Action Dropdown -->
+                    <td>
+                        <select class="status-dropdown" onchange="updateStatus(this, '{{ appt.id }}')">
+                            <option value="pending"   {% if appt.status == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="done"      {% if appt.status == 'done' %}selected{% endif %}>Done</option>
+                            <option value="cancelled" {% if appt.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+</main>
+
+
+</div>
+
+<script>
+// Live Search (Name, Mobile, Email)
+function searchTable() {
+    let input = document.getElementById("searchInput").value.toLowerCase();
+    let rows = document.querySelectorAll("#dataTable tbody tr");
+
+    rows.forEach(row => {
+        let name   = row.cells[0].innerText.toLowerCase();
+        let mobile = row.cells[1].innerText.toLowerCase();
+        let email  = row.cells[2].innerText.toLowerCase();
+
+        row.style.display =
+            (name.includes(input) || mobile.includes(input) || email.includes(input))
+            ? "" : "none";
+    });
+}
+
+// Update Status via AJAX + update badge UI
+function updateStatus(selectElem, id) {
+    let status = selectElem.value;
+
+    fetch('/update-appointment-status', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ id: id, status: status })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+
+            // Update status badge
+            let row = selectElem.closest('tr');
+            let statusCell = row.querySelector('.status-text');
+
+            let formatted = status.charAt(0).toUpperCase() + status.slice(1);
+
+            let badgeClass = 'status-badge status-pending';
+            if (status === 'done') badgeClass = 'status-badge status-confirmed';
+            else if (status === 'cancelled') badgeClass = 'status-badge status-cancelled';
+
+            statusCell.innerHTML = `<span class="${badgeClass}">${formatted}</span>`;
+
+            // Visual feedback on dropdown
+            selectElem.style.borderColor = "var(--primary)";
+            setTimeout(() => {
+                selectElem.style.borderColor = "#ccc";
+            }, 1000);
+        }
+    });
+}
+
+// Add Appointment via AJAX
+document.getElementById('addAppointmentForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    let formData = new FormData(this);
+    // create plain object from form entries; keys = name attributes above
+    let obj = Object.fromEntries(formData.entries());
+
+    fetch('/add-appointment', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(obj)
+    })
+    .then(res => {
+        if (!res.ok) {
+            // show error details if backend returns 400 with json
+            return res.json().then(j => { throw j; });
+        }
+        return res.json();
+    })
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    })
+    .catch(err => {
+        console.error('Add appointment error:', err);
+        alert(err.error || 'Failed to add appointment');
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Leads - RDC</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --primary:#1877f2;
+  --muted:#6b7280;
+  --bg:#f3f6fb;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Segoe UI,Arial;}
+body{background:var(--bg);}
+
+.container{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  min-height:100vh;
+}
+
+.sidebar{
+  background:white;
+  padding:20px;
+  border-right:1px solid #e5e7eb;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.sidebar h2{ color:var(--primary); margin-bottom:20px; }
+.nav a{
+  display:block; padding:12px; color:#111;
+  text-decoration:none; border-radius:6px; margin-bottom:5px;
+}
+.nav a:hover{ background:#eef4ff; }
+.nav a.active{ background:var(--primary); color:white; }
+
+.logout-btn{
+  margin-top:30px; display:block;
+  padding:12px; background:#ef4444; color:white;
+  text-align:center; border-radius:6px;
+  text-decoration:none;
+}
+.logout-btn:hover{ background:#dc2626; }
+
+.main{ padding:25px; }
+
+.search-box{ margin:20px 0; }
+.search-box input{
+  width:100%; padding:12px; border:1px solid #ccc; border-radius:6px;
+}
+
+.table-box{ margin-top:15px; }
+table{
+  width:100%; border-collapse:collapse; background:white;
+  border-radius:6px; overflow:hidden;
+}
+th,td{
+  padding:12px; border-bottom:1px solid #eee;
+}
+th{
+  background:#f5f7fa; color:var(--muted); text-align:left;
+}
+
+.status-btn{
+  padding:6px 10px;
+  margin-right:5px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.done { background:#16a34a; color:white; }
+.pending { background:#facc15; color:black; }
+.cancel { background:#dc2626; color:white; }
+
+select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+select:focus { border-color: #1877f2; box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2); }
+</style>
+
+<script>
+function searchTable() {
+  let input = document.getElementById("searchInput").value.toLowerCase();
+  let rows = document.querySelectorAll("#dataTable tbody tr");
+
+  rows.forEach(row => {
+    let name = row.cells[0].innerText.toLowerCase();
+    let mobile = row.cells[1].innerText.toLowerCase();
+    let test = row.cells[3].innerText.toLowerCase(); // test is column 3 (0-based)
+    if (name.includes(input) || mobile.includes(input) || test.includes(input)) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+}
+
+// UPDATE STATUS FUNCTION
+function updateStatus(id, newStatus) {
+    fetch('/update-lead-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload to reflect updated status
+            location.reload();
+        } else {
+            alert('Failed to update status');
+        }
+    })
+    .catch(err => {
+        console.error('Status update error', err);
+        alert('Server error');
+    });
+}
+</script>
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div>
+      <h2>RDC</h2>
+      <nav class="nav">
+        <a href="/dashboard"><i class="fa fa-home"></i> Dashboard</a>
+        <a href="/appointments"><i class="fa fa-calendar"></i> Appointments</a>
+        <a href="/website-leads" class="active"><i class="fa fa-globe"></i> Website Leads</a>
+
+        <a href="/download-excel"><i class="fa fa-file-excel"></i> Download Excel</a>
+        <a href="/send-whatsapp" target="_blank"><i class="fa-brands fa-whatsapp"></i> Send in WhatsApp</a>
+      </nav>
+    </div>
+
+    <a href="/logout" class="logout-btn">
+      <i class="fa fa-sign-out-alt"></i> Logout
+    </a>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <h1>Website Leads</h1>
+
+    <!-- Search -->
+    <div class="search-box">
+      <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search by Name, Mobile, or Test Type...">
+    </div>
+
+    <!-- Table -->
+    <div class="table-box">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Mobile Number</th>
+            <th>Email ID</th>
+            <th>Test</th>
+            <th>Patient Concern</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lead in website_leads %}
+          <tr>
+            <td>{{ lead.name }}</td>
+            <td>{{ lead.mobile }}</td>
+            <td>{{ lead.email }}</td>
+            <td>{{ lead.test_name }}</td>
+            <td>{{ lead.message }}</td>
+
+            <td>
+              <select onchange="updateStatus('{{ lead.id }}', this.value)">
+                <option value="pending" {% if lead.status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="done" {% if lead.status == 'done' %}selected{% endif %}>Done</option>
+                <option value="cancel" {% if lead.status == 'cancel' %}selected{% endif %}>Cancel</option>
+              </select>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+</div>
+<script>
+fetch("/api/mark-leads-seen", { method: "POST" });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Forgot Password - RDC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:Segoe UI, Arial; }
+
+body {
+    height:100vh;
+    background:linear-gradient(-45deg, #ffffff, #1877f2, #32c7b8, #23344b);
+    background-size:400% 400%;
+    animation:bgMove 10s ease infinite;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+@keyframes bgMove {
+    0% { background-position:0% 50% }
+    50% { background-position:100% 50% }
+    100% { background-position:0% 50% }
+}
+
+.forgot-box {
+    width:380px;
+    background:white;
+    border-radius:18px;
+    padding:32px;
+    box-shadow:0 15px 30px rgba(0,0,0,0.3);
+    text-align:center;
+}
+
+h2 {
+    color:#1877f2;
+    margin-bottom:6px;
+}
+
+.sub {
+    font-size:13px;
+    margin-bottom:20px;
+    color:gray;
+}
+
+.input-group {
+    position:relative;
+    margin-bottom:15px;
+}
+
+.input-group input {
+    width:100%;
+    padding:11px 38px;
+    border-radius:8px;
+    border:1px solid #d1d5db;
+    outline:none;
+}
+
+.input-group i {
+    position:absolute;
+    top:50%;
+    left:10px;
+    transform:translateY(-50%);
+    color:#9ca3af;
+}
+
+button {
+    width:100%;
+    padding:11px;
+    background:#1877f2;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-weight:500;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+button:hover { opacity:0.9; }
+
+.message {
+    margin-top:12px;
+    font-size:14px;
+    color:red;
+}
+
+.links {
+    text-align:center;
+    margin-top:12px;
+}
+
+.links a {
+    text-decoration:none;
+    color:#1877f2;
+    font-size:13px;
+}
+
+@media (max-width:420px) {
+    .forgot-box { width:90%; }
+}
+</style>
+</head>
+<body>
+
+<div class="forgot-box">
+    <h2>Forgot Password</h2>
+    <p class="sub">Enter your admin email to receive OTP</p>
+
+    <form method="POST">
+        <div class="input-group">
+            <i class="fa fa-envelope"></i>
+            <input type="email" name="email" placeholder="Enter admin email" required>
+        </div>
+
+        <button type="submit">Send OTP</button>
+    </form>
+
+    {% if message %}
+        <p class="message">{{ message }}</p>
+    {% endif %}
+
+    <div class="links">
+        <a href="/">Back to Login</a>
+    </div>
+</div>
+
+</body>
+</html>
