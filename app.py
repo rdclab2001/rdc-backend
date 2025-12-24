@@ -68,7 +68,8 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
 ADMIN_PASS = os.environ.get("ADMIN_PASS")
 
 if not ADMIN_EMAIL or not ADMIN_PASS:
-    raise RuntimeError("ADMIN_EMAIL or ADMIN_PASS missing in .env")
+    print("WARNING: ADMIN_EMAIL or ADMIN_PASS not set")
+
 
 
 
@@ -111,12 +112,19 @@ otp_store = {}
 app = Flask(__name__, static_folder="static")
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "fallback_dev_key")
 
+@app.route("/health")
+def health():
+    return {"status": "ok"}, 200
 
 
 CORS(app)
 
 
-init_admin()
+if ADMIN_EMAIL and ADMIN_PASS:
+    init_admin()
+else:
+    print("Skipping init_admin(): ADMIN credentials not set")
+
 
 # ------------------------------------------------------
 # MAIL CONFIG
