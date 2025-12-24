@@ -1,7 +1,0 @@
-Flask==2.3.4
-Flask-Mail==0.9.1
-Flask-Cors==3.1.2
-pandas==2.1.1
-openpyxl==3.1.2
-img2pdf==0.4.6
-Werkzeug==2.3.7
