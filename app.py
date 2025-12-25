@@ -46,22 +46,9 @@ from datetime import timedelta
 
 from sqlite3 import Error
 from dotenv import load_dotenv
-load_dotenv()
+
 
 from datetime import datetime
-
-
-
-from sib_api_v3_sdk import Configuration, ApiClient
-from sib_api_v3_sdk.api import transactional_emails_api
-from sib_api_v3_sdk.models import SendSmtpEmail, SendSmtpEmailTo
-
-
-# Configure Brevo API key
-configuration = Configuration()
-configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
-api_instance = transactional_emails_api.TransactionalEmailsApi(ApiClient(configuration))
-
 
 
 
@@ -79,9 +66,16 @@ def send_telegram_alert(message):
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
 ADMIN_PASS = os.environ.get("ADMIN_PASS")
 
+
 if not ADMIN_EMAIL or not ADMIN_PASS:
     print("WARNING: ADMIN_EMAIL or ADMIN_PASS not set")
 
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
+
+if not BREVO_API_KEY:
+    print("❌ BREVO_API_KEY NOT SET")
+else:
+    print("✅ BREVO_API_KEY loaded")
 
 
 
@@ -532,45 +526,85 @@ import base64
 
 def send_report_email(name, email, pdf_path):
     try:
+        import base64
+
         with open(pdf_path, "rb") as f:
             encoded_file = base64.b64encode(f.read()).decode()
 
-        send_smtp_email = SendSmtpEmail(
-            to=[SendSmtpEmailTo(email=email, name=name)],
-            sender={"email": "rdclab2201@gmail.com", "name": "RDC"},
-            subject="Your Lab Test Report - Ragavendra Diagnosis Center",
-            html_content=f"""
+        url = "https://api.brevo.com/v3/smtp/email"
+        api_key = os.environ.get("BREVO_API_KEY")
+        sender_email = os.environ.get("ADMIN_EMAIL")
+
+        headers = {
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json"
+        }
+
+        payload = {
+            "sender": {
+                "email": sender_email,
+                "name": "RDC Lab"
+            },
+            "to": [
+                {"email": email, "name": name}
+            ],
+            "subject": "Your Lab Test Report",
+            "htmlContent": f"""
             <p>Dear {name},</p>
-
-            <p>Thank you for visiting Ragavendra Diagnosis Center.</p>
-
-            <p>Your lab test report is attached with this email.</p>
-
-            <p>Regards,<br>
-            Ragavendra Diagnosis Center</p>
+            <p>Your lab report is attached.</p>
+            <p>Regards,<br>RDC</p>
             """,
-            attachment=[{
-                "content": encoded_file,
-                "name": os.path.basename(pdf_path)
-            }]
-        )
+            "attachment": [
+                {
+                    "content": encoded_file,
+                    "name": os.path.basename(pdf_path)
+                }
+            ]
+        }
 
-        api_instance.send_transac_email(send_smtp_email)
-        print("✅ Report email sent to", email)
+        r = requests.post(url, json=payload, headers=headers)
+        print("📎 Report email status:", r.status_code)
+        print("📎 Report email response:", r.text)
 
     except Exception as e:
-        print("❌ Report email failed:", e)
+        print("❌ Report email error:", e)
+
 
 
 
 def send_brevo_email(to_email, to_name, subject, html):
-    send_smtp_email = SendSmtpEmail(
-        to=[SendSmtpEmailTo(email=to_email, name=to_name)],
-        sender={"email": "rdclab2201@gmail.com", "name": "RDC"},
-        subject=subject,
-        html_content=html
-    )
-    api_instance.send_transac_email(send_smtp_email)
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    api_key = os.environ.get("BREVO_API_KEY")
+    sender_email = os.environ.get("ADMIN_EMAIL")  # MUST be verified in Brevo
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+
+    payload = {
+        "sender": {
+            "email": sender_email,
+            "name": "RDC Lab"
+        },
+        "to": [
+            {
+                "email": to_email,
+                "name": to_name
+            }
+        ],
+        "subject": subject,
+        "htmlContent": html
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+
+    print("📧 Brevo status:", response.status_code)
+    print("📧 Brevo response:", response.text)
+
 
 
 
@@ -755,7 +789,14 @@ def send_booking_email(name, email, test_name):
     <br>
     <p>Regards,<br>Ragavendra Diagnosis Center</p>
     """
-    send_brevo_email(email, name, "RDC Booking Confirmation", html)
+
+    send_brevo_email(
+        email,
+        name,
+        "RDC Booking Confirmation",
+        html
+    )
+
 
 
 
@@ -824,27 +865,7 @@ def book_test():
 
 
 
-@app.route('/send-email', methods=['POST'])
-def send_email_brevo():
-    data = request.json
-    email = data.get('email')
-    name = data.get('name', 'User')
 
-    if not email:
-        return jsonify({"error": "Email is required"}), 400
-
-    send_smtp_email = SendSmtpEmail(
-        to=[SendSmtpEmailTo(email=email, name=name)],
-        sender={"email": "rdclab2201@gmail.com", "name": "RDC App"},
-        subject="Test Email from RDC App",
-        html_content=f"<html><body><h1>Hello {name}!</h1><p>This is a test email via Brevo.</p></body></html>"
-    )
-
-    try:
-        api_response = api_instance.send_transac_email(send_smtp_email)
-        return jsonify({"message": "Email sent successfully", "response": str(api_response)})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 
