@@ -181,7 +181,7 @@ function updateStatus(id, newStatus) {
           </tr>
         </thead>
         <tbody>
-          {% for lead in website_leads %}
+          {% for lead in website_leads|reverse %}
           <tr>
             <td>{{ lead.name }}</td>
             <td>{{ lead.mobile }}</td>

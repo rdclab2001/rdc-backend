@@ -465,6 +465,8 @@ def website_leads():
         return redirect(url_for("login"))
 
     data = get_data("website_leads")
+    # Sort by id descending (latest first)
+    data = sorted(data, key=lambda x: x["id"], reverse=True)
     return render_template("website-leads.html", website_leads=data)
 
 
@@ -892,6 +894,13 @@ def book_test():
         return jsonify({"status": "error", "message": "Server error"}), 500
 
 
+@app.route("/get-lead-count")
+def get_lead_count():
+    if not session.get("user"):
+        return jsonify({"count": 0})
+    
+    leads = get_data("website_leads")
+    return jsonify({"count": len(leads)})
 
 
 

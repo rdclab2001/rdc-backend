@@ -216,6 +216,24 @@ function sendEmail() {
     // Open default email application
     window.location.href = mailtoLink;
 }
+
+
+// Poll every 10 seconds
+setInterval(() => {
+    fetch('/get-lead-count')
+    .then(res => res.json())
+    .then(data => {
+        const badge = document.getElementById('leadBadge');
+        if(data.count > 0){
+            badge.style.display = 'inline-block';
+            badge.innerText = data.count;
+        } else {
+            badge.style.display = 'none';
+        }
+    })
+    .catch(err => console.error('Lead count fetch error:', err));
+}, 10000); // 10000ms = 10 seconds
+
 </script>
 </body>
 </html>
