@@ -218,13 +218,18 @@ for table, cols in tables_to_fix.items():
 # ------------------------------------------------------
 # DATABASE FUNCTION
 # ------------------------------------------------------
-def get_data(table):
+def get_data(table, order_by=None, desc=False):
     conn = sqlite3.connect("rdc.db")
     cur = conn.cursor()
     cur.execute(f"PRAGMA table_info({table})")
     col_names = [col[1] for col in cur.fetchall()]
     col_list = ", ".join(col_names)
-    cur.execute(f"SELECT {col_list} FROM {table}")
+
+    sql = f"SELECT {col_list} FROM {table}"
+    if order_by:
+        sql += f" ORDER BY {order_by} {'DESC' if desc else 'ASC'}"
+
+    cur.execute(sql)
     rows = cur.fetchall()
     conn.close()
 
@@ -233,6 +238,7 @@ def get_data(table):
         row_dict = {col: r[i] for i, col in enumerate(col_names)}
         data.append(row_dict)
     return data
+
 
 # ------------------------------------------------------
 # ROUTES (Login, Forgot, OTP, Dashboard, etc.)
@@ -464,10 +470,10 @@ def website_leads():
     if not session.get("user"):
         return redirect(url_for("login"))
 
-    data = get_data("website_leads")
-    # Sort by id descending (latest first)
-    data = sorted(data, key=lambda x: x["id"], reverse=True)
+    # Fetch leads, newest first
+    data = get_data("website_leads", order_by="id", desc=True)
     return render_template("website-leads.html", website_leads=data)
+
 
 
 
