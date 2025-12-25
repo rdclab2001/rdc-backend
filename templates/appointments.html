@@ -128,21 +128,20 @@ select.status-dropdown:hover { border-color: var(--primary); }
 <main class="main">
     <h1>Appointments</h1>
 
-    <!-- Add Form -->
-    <div class="add-form">
-        <h3>Add Appointment</h3>
+<!-- Add Form -->
+<div class="add-form">
+    <h3>Add Appointment</h3>
     <form id="addAppointmentForm">
         <!-- IMPORTANT: name attributes match backend columns -->
         <input type="text" name="name" placeholder="Name" required>
         <input type="text" name="mobile" placeholder="Mobile Number" required>
         <input type="email" name="email" placeholder="Email ID" required>
-        <input type="text" name="test_type" placeholder="Test" required>
+        <input type="text" name="test_name" placeholder="Test" required> <!-- updated -->
         <input type="text" name="message" placeholder="Patient Concern">
 
         <button type="submit">Add</button>
     </form>
-
-    </div>
+</div>
 
     <!-- Search -->
     <div class="search-box">

@@ -544,16 +544,31 @@ def send_report_email(name, email, pdf_path):
         payload = {
             "sender": {
                 "email": sender_email,
-                "name": "RDC Lab"
+                "name": "Ragavendra Diagnosis Center"
             },
             "to": [
                 {"email": email, "name": name}
             ],
-            "subject": "Your Lab Test Report",
+            "subject": "Your Lab Test Report - Ragavendra Diagnosis Center",
             "htmlContent": f"""
-            <p>Dear {name},</p>
-            <p>Your lab report is attached.</p>
-            <p>Regards,<br>RDC</p>
+            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                <h2 style="color: #2E86C1;">Lab Test Report</h2>
+                <p>Dear {name},</p>
+
+                <p>We are pleased to inform you that your lab test report is now available. Please find the attached PDF document containing your detailed results.</p>
+
+                <p><strong>Important:</strong> If you have any questions or need further clarification regarding your report, feel free to reach out to us:</p>
+                <ul>
+                    <li>📞 Phone: +91 87222 02917</li>
+                    <li>✉️ Email: rdclab2001@gmail.com</li>
+                </ul>
+
+                <p>Thank you for choosing <strong>Ragavendra Diagnosis Center</strong> for your healthcare needs.</p>
+
+                <br>
+                <p>Warm regards,<br>
+                <strong>Ragavendra Diagnosis Center</strong></p>
+            </div>
             """,
             "attachment": [
                 {
@@ -562,6 +577,7 @@ def send_report_email(name, email, pdf_path):
                 }
             ]
         }
+
 
         r = requests.post(url, json=payload, headers=headers)
         print("📎 Report email status:", r.status_code)
@@ -782,12 +798,24 @@ def get_db_connection():
 
 def send_booking_email(name, email, test_name):
     html = f"""
-    <h3>Booking Confirmation</h3>
-    <p>Dear {name},</p>
-    <p>Your booking for <b>{test_name}</b> has been received.</p>
-    <p>Our team will contact you shortly.</p>
-    <br>
-    <p>Regards,<br>Ragavendra Diagnosis Center</p>
+    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2E86C1;">Booking Confirmation</h2>
+        <p>Dear {name},</p>
+
+        <p>Thank you for booking your <strong>{test_name}</strong> test with Ragavendra Diagnosis Center.</p>
+
+        <p>We have successfully received your request. Our team will contact you shortly to confirm the details and schedule your appointment.</p>
+
+        <p><strong>For any queries or assistance, please contact us at:</strong><br>
+        Phone: +91 87222 02917<br>
+        Email: rdclab2001@gmail.com</p>
+
+        <p>We look forward to serving you.</p>
+
+        <br>
+        <p>Best regards,<br>
+        <strong>Ragavendra Diagnosis Center</strong></p>
+    </div>
     """
 
     send_brevo_email(
@@ -796,6 +824,7 @@ def send_booking_email(name, email, test_name):
         "RDC Booking Confirmation",
         html
     )
+
 
 
 
