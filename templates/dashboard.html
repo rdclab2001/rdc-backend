@@ -177,63 +177,75 @@ body{background:var(--bg);}
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function() {
 
-document.getElementById('convertForm').addEventListener('submit', function(e){
-  e.preventDefault();
-  const formData = new FormData(this);
+    // -------------------------
+    // Convert Images → PDF
+    // -------------------------
+    const convertForm = document.getElementById('convertForm');
+    if (convertForm) {
+        convertForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const formData = new FormData(this);
 
-  fetch('/convert-pdf', {
-    method: 'POST',
-    body: formData
-  })
-  .then(response => response.blob())
-  .then(blob => {
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "Report.pdf";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  })
-  .catch(err => alert("Error converting files: " + err));
-});
+            fetch('/convert-pdf', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "Report.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            })
+            .catch(err => alert("Error converting files: " + err));
+        });
+    }
 
+    // -------------------------
+    // Send Email Helper
+    // -------------------------
+    window.sendEmail = function() {
+        var subject = "Regarding Sending Lab Test Report";
+        var body =
+            "Thanks for visiting Ragavendra Diagnosis Center,%0D%0A" +
+            "Below we have attached your report.%0D%0A%0D%0A";
+        var mailtoLink = "mailto:?subject=" + encodeURIComponent(subject) +
+                         "&body=" + body;
+        window.location.href = mailtoLink;
+    }
 
-function sendEmail() {
-    // Email subject
-    var subject = "Regarding Sending Lab Test Report";
-
-    // Email body
-    var body =
-        "Thanks for visiting Ragavendra Diagnosis Center,%0D%0A" +
-        "Below we have attached your report.%0D%0A%0D%0A";
-
-    // Create mailto link
-    var mailtoLink = "mailto:?subject=" + encodeURIComponent(subject) +
-                     "&body=" + body;
-
-    // Open default email application
-    window.location.href = mailtoLink;
-}
-
-
-// Poll every 10 seconds
-setInterval(() => {
-    fetch('/get-lead-count')
-    .then(res => res.json())
-    .then(data => {
+    // -------------------------
+    // Auto Refresh Lead Badge
+    // -------------------------
+    const updateLeadBadge = () => {
         const badge = document.getElementById('leadBadge');
-        if(data.count > 0){
-            badge.style.display = 'inline-block';
-            badge.innerText = data.count;
-        } else {
-            badge.style.display = 'none';
-        }
-    })
-    .catch(err => console.error('Lead count fetch error:', err));
-}, 10000); // 10000ms = 10 seconds
+        if (!badge) return;
 
+        fetch('/get-lead-count')
+        .then(res => res.json())
+        .then(data => {
+            if(data.count > 0){
+                badge.style.display = 'inline-block';
+                badge.innerText = data.count;
+            } else {
+                badge.style.display = 'none';
+            }
+        })
+        .catch(err => console.error('Lead count fetch error:', err));
+    }
+
+    // Initial run
+    updateLeadBadge();
+
+    // Poll every 10 seconds
+    setInterval(updateLeadBadge, 10000);
+});
 </script>
+
 </body>
 </html>
