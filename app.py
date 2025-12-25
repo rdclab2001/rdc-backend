@@ -15,7 +15,7 @@ from flask import (
 # -------------------------------
 # Flask Extensions
 # -------------------------------
-from flask_mail import Mail, Message
+# from flask_mail import Mail, Message
 from flask_cors import CORS
 
 # -------------------------------
@@ -24,16 +24,14 @@ from flask_cors import CORS
 import os
 import random
 import sqlite3
-import json
-import urllib.parse
-from datetime import datetime
+import img2pdf
 import requests
 
 # -------------------------------
 # Third-party Libraries
 # -------------------------------
 import pandas as pd
-import img2pdf
+
 
 # -------------------------------
 # Werkzeug
@@ -50,11 +48,25 @@ from sqlite3 import Error
 from dotenv import load_dotenv
 load_dotenv()
 
+from datetime import datetime
 
 
 
-BOT_TOKEN = "8319954209:AAEdjDypv_QU3G-233tmOPP--PKz72rz_Hw"
-CHAT_ID = "8535041782"
+from sib_api_v3_sdk import Configuration, ApiClient
+from sib_api_v3_sdk.api import transactional_emails_api
+from sib_api_v3_sdk.models import SendSmtpEmail, SendSmtpEmailTo
+
+
+# Configure Brevo API key
+configuration = Configuration()
+configuration.api_key['api-key'] = os.environ.get('BREVO_API_KEY')
+api_instance = transactional_emails_api.TransactionalEmailsApi(ApiClient(configuration))
+
+
+
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
 
 def send_telegram_alert(message):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -126,16 +138,16 @@ else:
     print("Skipping init_admin(): ADMIN credentials not set")
 
 
-# ------------------------------------------------------
-# MAIL CONFIG
-# ------------------------------------------------------
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
-app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
+# # ------------------------------------------------------
+# # MAIL CONFIG
+# # ------------------------------------------------------
+# app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+# app.config['MAIL_PORT'] = 587
+# app.config['MAIL_USE_TLS'] = True
+# app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
+# app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
 
-mail = Mail(app)
+# mail = Mail(app)
 
 
 def ensure_table(table_name, columns):
@@ -270,40 +282,36 @@ def forgot():
 
         otp = random.randint(100000, 999999)
         otp_store[email] = {
-        "otp": otp,
-        "time": datetime.now()
+            "otp": otp,
+            "time": datetime.now()
         }
 
         session["reset_email"] = email
 
         try:
-            msg = Message(
-                subject="RDC Admin Password Reset – One Time Password (OTP)",
-                sender=app.config["MAIL_USERNAME"],
-                recipients=[email]
+            html = f"""
+            <p>Dear Administrator,</p>
+
+            <p>We received a request to reset your RDC Admin password.</p>
+
+            <p><strong>Your One Time Password (OTP) is:</strong></p>
+            <h2>{otp}</h2>
+
+            <p>This OTP is valid for 5 minutes.</p>
+
+            <p>If you did not request this, please ignore this email.</p>
+
+            <p>Regards,<br>
+            Ragavendra Diagnosis Center</p>
+            """
+
+            send_brevo_email(
+                email,
+                "Admin",
+                "RDC Admin Password Reset – OTP",
+                html
             )
 
-            msg.body = f"""
-Dear Administrator,
-
-We received a request to reset the password for your Ragavendra Diagnosis Center (RDC) Admin account.
-
-Your One Time Password (OTP) is:
-
-🔐 OTP: {otp}
-
-⏱ This OTP is valid for the next 5 minutes.
-
-For security reasons, please do not share this OTP with anyone.
-
-If you did not request a password reset, please ignore this email.
-
-Regards,
-Ragavendra Diagnosis Center
-Admin Support Team
-"""
-
-            mail.send(msg)
             return redirect(url_for("verify_otp"))
 
         except Exception as e:
@@ -311,6 +319,7 @@ Admin Support Team
             message = "❌ Unable to send OTP. Please try again later."
 
     return render_template("forgot.html", message=message)
+
 
 
 
@@ -401,8 +410,12 @@ def dashboard():
 
 @app.route("/appointments")
 def appointments():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+
     data = get_data("appointments")
     return render_template("appointments.html", appointments=data)
+
 
 # Add new appointment manually
 @app.route('/add-appointment', methods=['POST'])
@@ -454,6 +467,9 @@ def update_appointment_status():
 
 @app.route("/website-leads")
 def website_leads():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+
     data = get_data("website_leads")
     return render_template("website-leads.html", website_leads=data)
 
@@ -461,6 +477,9 @@ def website_leads():
 
 @app.route("/download-excel")
 def download_excel():
+    if not session.get("user"):
+        return redirect(url_for("login"))
+
     appointments = pd.DataFrame(get_data("appointments"))
     leads = pd.DataFrame(get_data("website_leads"))
     file_path = "RDC_Data.xlsx"
@@ -495,13 +514,8 @@ def update_lead_status():
 
 
 
-# -----------------------------------------------
-# IMAGE TO PDF CONVERTER (FINAL FIXED VERSION)
-# -----------------------------------------------
-from flask import send_file, request
-import img2pdf
-from datetime import datetime
-from werkzeug.utils import secure_filename
+
+
 
 UPLOAD_FOLDER = "uploads"
 PDF_FOLDER = "pdfs"
@@ -513,6 +527,51 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+import base64
+
+def send_report_email(name, email, pdf_path):
+    try:
+        with open(pdf_path, "rb") as f:
+            encoded_file = base64.b64encode(f.read()).decode()
+
+        send_smtp_email = SendSmtpEmail(
+            to=[SendSmtpEmailTo(email=email, name=name)],
+            sender={"email": "rdclab2201@gmail.com", "name": "RDC"},
+            subject="Your Lab Test Report - Ragavendra Diagnosis Center",
+            html_content=f"""
+            <p>Dear {name},</p>
+
+            <p>Thank you for visiting Ragavendra Diagnosis Center.</p>
+
+            <p>Your lab test report is attached with this email.</p>
+
+            <p>Regards,<br>
+            Ragavendra Diagnosis Center</p>
+            """,
+            attachment=[{
+                "content": encoded_file,
+                "name": os.path.basename(pdf_path)
+            }]
+        )
+
+        api_instance.send_transac_email(send_smtp_email)
+        print("✅ Report email sent to", email)
+
+    except Exception as e:
+        print("❌ Report email failed:", e)
+
+
+
+def send_brevo_email(to_email, to_name, subject, html):
+    send_smtp_email = SendSmtpEmail(
+        to=[SendSmtpEmailTo(email=to_email, name=to_name)],
+        sender={"email": "rdclab2201@gmail.com", "name": "RDC"},
+        subject=subject,
+        html_content=html
+    )
+    api_instance.send_transac_email(send_smtp_email)
+
 
 
 @app.route("/convert-and-send-report", methods=["POST"])
@@ -579,7 +638,7 @@ def convert_and_send_report():
         return jsonify({"error": "Server error"}), 500
 
 
-@app.route("/send-email")
+@app.route("/send-email-page")
 def send_email_page():
     # Renders the page where staff can select patient, upload images and prepare email
     if not session.get("user"):
@@ -688,40 +747,16 @@ def get_db_connection():
 
 
 def send_booking_email(name, email, test_name):
-    with app.app_context():   # 🔑 THIS IS THE FIX
-        try:
-            msg = Message(
-                subject="RDC Booking Confirmation",
-                sender=app.config['MAIL_USERNAME'],
-                recipients=[email]
-            )
+    html = f"""
+    <h3>Booking Confirmation</h3>
+    <p>Dear {name},</p>
+    <p>Your booking for <b>{test_name}</b> has been received.</p>
+    <p>Our team will contact you shortly.</p>
+    <br>
+    <p>Regards,<br>Ragavendra Diagnosis Center</p>
+    """
+    send_brevo_email(email, name, "RDC Booking Confirmation", html)
 
-            msg.body = f"""
-            Dear {name},
-
-            Thank you for choosing Ragavendra Diagnosis Center.
-
-            We have successfully received your booking request with the following details:
-
-            Test Name: {test_name}
-
-            Our team will contact you shortly to guide you with the next steps.
-
-            For any assistance, please contact Ragavendra Diagnosis Center:
-            📞 Phone: +91-XXXXXXXXXX
-            📧 Email: rdclab2001@gmail.com
-
-            Warm regards,
-            Ragavendra Diagnosis Center
-            Quality Care • Trusted Diagnosis
-            """
-
-
-            mail.send(msg)
-            print("✅ Confirmation email sent")
-
-        except Exception as e:
-            print("❌ Email error:", e)
 
 
 
@@ -789,41 +824,32 @@ def book_test():
 
 
 
-def send_report_email(name, email, pdf_path):
-    with app.app_context():   # ✅ THIS IS THE FIX
-        try:
-            msg = Message(
-                subject="Your Lab Test Report - Ragavendra Diagnosis Center",
-                sender=app.config['MAIL_USERNAME'],
-                recipients=[email],
-                body=f"""
-Dear {name},
+@app.route('/send-email', methods=['POST'])
+def send_email_brevo():
+    data = request.json
+    email = data.get('email')
+    name = data.get('name', 'User')
 
-Thank you for visiting Ragavendra Diagnosis Center.
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
 
-Please find your lab test report attached.
+    send_smtp_email = SendSmtpEmail(
+        to=[SendSmtpEmailTo(email=email, name=name)],
+        sender={"email": "rdclab2201@gmail.com", "name": "RDC App"},
+        subject="Test Email from RDC App",
+        html_content=f"<html><body><h1>Hello {name}!</h1><p>This is a test email via Brevo.</p></body></html>"
+    )
 
-Regards,
-Ragavendra Diagnosis Center
-"""
-            )
-
-            with open(pdf_path, "rb") as f:
-                msg.attach(
-                    filename=os.path.basename(pdf_path),
-                    content_type="application/pdf",
-                    data=f.read()
-                )
-
-            mail.send(msg)
-            print("✅ Email sent to", email)
-
-        except Exception as e:
-            print("❌ Email send failed:", e)
+    try:
+        api_response = api_instance.send_transac_email(send_smtp_email)
+        return jsonify({"message": "Email sent successfully", "response": str(api_response)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    pass
+
 
